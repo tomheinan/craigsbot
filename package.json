@@ -1,0 +1,28 @@
+{
+  "name": "konabot",
+  "version": "0.0.0",
+  "description": "A robot designed to find housing in Hawaii",
+  "author": {
+    "name": "Tom Heinan",
+    "email": "me@tomheinan.com",
+    "url": "https://tomheinan.com/"
+  },
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/tomheinan/konabot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tomheinan/konabot"
+  },
+  "bin": {
+    "konabot": "./bin/konabot.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "preferGlobal": true,
+  "private": true,
+  "dependencies": {
+    "commander": "2.3.x",
+    "twilio": "1.7.x"
+  }
+}

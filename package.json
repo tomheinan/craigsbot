@@ -23,6 +23,9 @@
   "private": true,
   "dependencies": {
     "commander": "2.3.x",
-    "twilio": "1.7.x"
+    "cheerio": "0.17.x",
+    "mysql": "2.5.x",
+    "twilio": "1.7.x",
+    "bunyan": "1.0.x"
   }
 }

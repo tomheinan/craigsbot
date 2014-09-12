@@ -18,6 +18,15 @@ var TWILIO_ACCOUNT_SID = process.env.KONABOT_TWILIO_ACCOUNT_SID,
     DB_PASSWORD        = process.env.KONABOT_DB_PASSWORD || "konabot";
 
 var MAX_RENT  = 1100;
+var httpOptions = {
+  hostname: 'honolulu.craigslist.org',
+  port: 80,
+  method: 'GET',
+  path: '/search/big/apa?maxAsk=' + MAX_RENT + '&pets_dog=wooof&sale_date=-',
+  headers: {
+    'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36"
+  }
+};
 
 if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !NOTIFICATIONS_FROM || !NOTIFICATIONS_TO || !DB_HOST || !DB_NAME || !DB_USER || !DB_PASSWORD) {
   console.error("Missing environment variable");
@@ -48,9 +57,7 @@ var sendNotification = function (message) {
         body: message
       }, function (error, message) {
         if (error) {
-          console.error(error);
-        } else {
-          console.log(message);
+          log.error(error);
         }
       });
     }
@@ -58,54 +65,47 @@ var sendNotification = function (message) {
 };
 
 var rememberListings = function (listings) {
-  db.connect(function (error) {
-    if (error) {
-      log.error(error);
-    } else {
-      log.info("Connected to mysql with connection ID " + db.threadId);
+  listings.forEach(function (listing, index) {
+    db.query('select count(*) from listings where id = ?', [listing.id], function (error, results) {
+      var count = parseInt(results[0]['count(*)']);
 
-      listings.forEach(function (listing, index) {
-        db.query('select count(*) from listings where id = ?', [listing.id], function (error, results) {
-          var count = parseInt(results[0]['count(*)']);
+      if (count == 0) {
+        listing.posted_on = listing.postedOn;
+        delete listing.postedOn;
 
-          if (count == 0) {
-            listing.posted_on = listing.postedOn;
-            delete listing.postedOn;
+        db.query('insert into listings SET ?', listing, function (error, result) {
+            if (error) {
+              console.error(error);
+            } else {
+              var message = "I found";
 
-            db.query('insert into listings SET ?', listing, function (error, result) {
-                if (error) {
-                  console.error(error);
-                } else {
-                  var message = "I found";
-
-                  if (listing.bedrooms) {
-                    message += " a ";
-                    if (listing.size) {
-                      message += listing.size + " ";
-                    }
-                    message += listing.bedrooms + "br apartment";
-                  } else {
-                    message += " an apartment";
-                  }
-
-                  if (listing.location) {
-                    message += " in " + listing.location;
-                  }
-
-                  if (listing.price) {
-                    message += " for $" + listing.price;
-                  }
-
-                  message += ": " + listing.url;
-
-                  log.info(message);
+              if (listing.bedrooms) {
+                message += " a ";
+                if (listing.size) {
+                  message += listing.size + " ";
                 }
+                message += listing.bedrooms + "br apartment";
+              } else {
+                message += " an apartment";
               }
-            );
+
+              if (listing.location) {
+                message += " in " + listing.location;
+              }
+
+              if (listing.price) {
+                message += " for $" + listing.price;
+              }
+
+              message += ": " + listing.url;
+
+              log.info(message);
+              sendNotification(message);
+            }
           }
-        });
-      });
-    }
+        );
+      }
+    });
   });
 }
 
@@ -150,34 +150,36 @@ var parseListings = function(responseBody, callback) {
   callback(listings);
 };
 
+var scanListings = function () {
+  log.info("Searching craigslist for dog-friendly apartments in Kona");
+  var request = http.request(httpOptions, function(response) {
+    var responseBody = "";
+    
+    response.on('data', function(chunk) {
+      responseBody += chunk;
+    });
+  
+    response.on('end', function() {
+      parseListings(responseBody, rememberListings);
+    });
+  });
+
+  request.end();
+
+  var min           = 10, // minutes
+      max           = 30, //minutes
+      minutesToWait = Math.floor(Math.random() * (max - min)) + min;
+
+  log.info("Will check again in " + minutesToWait + " minutes");
+  setTimeout(arguments.callee, minutesToWait * 60 * 1000);
+};
+
+// parse and go
 konabot
   .version(packageInfo.version)
   .option('-n, --numbers <list>', 'a list of phone numbers that should receive SMS notifications, e.g. +18005551234,+18005554321', numbers, numbers(NOTIFICATIONS_TO))
   .parse(process.argv);
 
-var httpOptions = {
-  hostname: 'honolulu.craigslist.org',
-  port: 80,
-  method: 'GET',
-  path: '/search/big/apa?maxAsk=' + MAX_RENT + '&pets_dog=wooof&sale_date=-',
-  headers: {
-    'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36"
-  }
-};
-
 log.info("KonaBot lives!");
+scanListings();
 
-log.info("Searching craigslist for dog-friendly apartments in Kona");
-var request = http.request(httpOptions, function(response) {
-  var responseBody = "";
-  
-  response.on('data', function(chunk) {
-    responseBody += chunk;
-  });
-
-  response.on('end', function() {
-    parseListings(responseBody, rememberListings);
-  });
-});
-
-request.end();

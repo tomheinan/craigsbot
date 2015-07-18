@@ -145,12 +145,11 @@ var parseListings = function(responseBody, callback) {
       listing.postedOn = yyyy + "-" + (mm[1]?mm:"0"+mm[0]) + "-" + (dd[1]?dd:"0"+dd[0]);
       
       listings.push(listing);
-      log.info(listing);
     }
   });
 
   log.info("Found " + listings.length + " listings");
-  //callback(listings);
+  callback(listings);
 };
 
 var scanListings = function () {

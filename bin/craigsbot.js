@@ -100,7 +100,7 @@ var rememberListings = function (listings) {
               message += ": " + listing.url;
 
               log.info(message);
-              sendNotification(message);
+              //sendNotification(message);
             }
           }
         );
@@ -115,8 +115,8 @@ var parseListings = function(responseBody, callback) {
 
   var content = $('div.content');
   content.find('p.row').each(function (index, element) {
-    if ($(element).attr('data-repost-of') == undefined && $(element).find('a').first().attr('href').match(/^\/sfc/i)) {
-        var listing = {
+    if ($(element).find('a').first().attr('href').match(/^\/sfc/i)) {
+      var listing = {
         id: parseInt($(element).attr('data-pid')),
         title: $(element).find('a[data-id="' + $(element).attr('data-pid') + '"]').first().text(),
         url: "http://sfbay.craigslist.org" + $(element).find('a').first().attr('href'),

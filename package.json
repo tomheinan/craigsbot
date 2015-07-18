@@ -1,20 +1,20 @@
 {
-  "name": "konabot",
+  "name": "craigsbot",
   "version": "0.0.0",
-  "description": "A robot designed to find housing in Hawaii",
+  "description": "An ally in the fight for affordable apartments in San Francisco",
   "author": {
     "name": "Tom Heinan",
     "email": "me@tomheinan.com",
     "url": "https://tomheinan.com/"
   },
   "license": "GPL-3.0",
-  "homepage": "https://github.com/tomheinan/konabot",
+  "homepage": "https://github.com/tomheinan/craigsbot",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tomheinan/konabot"
+    "url": "https://github.com/tomheinan/craigsbot"
   },
   "bin": {
-    "konabot": "./bin/konabot.js"
+    "craigsbot": "./bin/craigsbot.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -22,10 +22,10 @@
   "preferGlobal": true,
   "private": true,
   "dependencies": {
-    "commander": "2.3.x",
-    "cheerio": "0.17.x",
-    "mysql": "2.5.x",
-    "twilio": "1.7.x",
-    "bunyan": "1.0.x"
+    "commander": "2.8.x",
+    "cheerio": "0.19.x",
+    "mysql": "2.8.x",
+    "twilio": "2.2.x",
+    "bunyan": "1.4.x"
   }
 }

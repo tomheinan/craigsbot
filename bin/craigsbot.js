@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-var konabot     = require('commander'),
+var craigsbot   = require('commander'),
     http        = require('http'),
     cheerio     = require('cheerio'),
     mysql       = require('mysql'),
@@ -8,21 +8,21 @@ var konabot     = require('commander'),
     bunyan      = require('bunyan'),
     packageInfo = require('../package.json');
 
-var TWILIO_ACCOUNT_SID = process.env.KONABOT_TWILIO_ACCOUNT_SID,
-    TWILIO_AUTH_TOKEN  = process.env.KONABOT_TWILIO_AUTH_TOKEN,
-    NOTIFICATIONS_FROM = process.env.KONABOT_NOTIFICATIONS_FROM,
-    NOTIFICATIONS_TO   = process.env.KONABOT_NOTIFICATIONS_TO,
-    DB_HOST            = process.env.KONABOT_DB_HOST || "localhost",
-    DB_NAME            = process.env.KONABOT_DB_NAME || "konabot",
-    DB_USER            = process.env.KONABOT_DB_USER || "konabot",
-    DB_PASSWORD        = process.env.KONABOT_DB_PASSWORD || "konabot";
+var TWILIO_ACCOUNT_SID = process.env.CRAIGSBOT_TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN  = process.env.CRAIGSBOT_TWILIO_AUTH_TOKEN,
+    NOTIFICATIONS_FROM = process.env.CRAIGSBOT_NOTIFICATIONS_FROM,
+    NOTIFICATIONS_TO   = process.env.CRAIGSBOT_NOTIFICATIONS_TO,
+    DB_HOST            = process.env.CRAIGSBOT_DB_HOST || "localhost",
+    DB_NAME            = process.env.CRAIGSBOT_DB_NAME || "craigsbot",
+    DB_USER            = process.env.CRAIGSBOT_DB_USER || "craigsbot",
+    DB_PASSWORD        = process.env.CRAIGSBOT_DB_PASSWORD || "craigsbot";
 
-var MAX_RENT  = 1100;
+var MAX_RENT  = 4000;
 var httpOptions = {
-  hostname: 'honolulu.craigslist.org',
+  hostname: 'sfbay.craigslist.org',
   port: 80,
   method: 'GET',
-  path: '/search/big/apa?maxAsk=' + MAX_RENT + '&pets_dog=wooof&sale_date=-',
+  path: '/search/sfc/apa?max_price=' + MAX_RENT + '&postedToday=1&hasPic=1&pets_dog=1&bedrooms=1&sale_date=-',
   headers: {
     'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.120 Safari/537.36"
   }
@@ -49,7 +49,7 @@ var numbers = function (val) {
 };
 
 var sendNotification = function (message) {
-  konabot.numbers.forEach(function (number, index) {
+  craigsbot.numbers.forEach(function (number, index) {
     if (number.match(/^\+1\d{10}$/)) {
       twilio.messages.create({
         to: number,
@@ -100,7 +100,7 @@ var rememberListings = function (listings) {
               message += ": " + listing.url;
 
               log.info(message);
-              sendNotification(message);
+              //sendNotification(message);
             }
           }
         );
@@ -115,43 +115,46 @@ var parseListings = function(responseBody, callback) {
 
   var content = $('div.content');
   content.find('p.row').each(function (index, element) {
-    var listing = {
-      id: parseInt($(element).attr('data-pid')),
-      title: $(element).find('a[data-id="' + $(element).attr('data-pid') + '"]').first().text(),
-      url: "http://honolulu.craigslist.org" + $(element).find('a').first().attr('href'),
-      price: parseInt($(element).find('span.price').text().replace(/\D/, ''))
-    };
-
-    if (isNaN(listing.price)) {
-      delete listing.price;
-    }
-
-    var regex = /(\S+)br\D*(\d+\S+)?.*\((.*)\)/i;
-    var results = $(element).find('span.l2').text().match(regex);
-
-    if (results) {
-      listing['bedrooms'] = parseInt(results[1]);
-      if (results[2]) {
-        listing.size = results[2];
+    if ($(element).attr('data-repost-of') == undefined && $(element).find('a').first().attr('href').match(/^\/sfc/i)) {
+        var listing = {
+        id: parseInt($(element).attr('data-pid')),
+        title: $(element).find('a[data-id="' + $(element).attr('data-pid') + '"]').first().text(),
+        url: "http://sfbay.craigslist.org" + $(element).find('a').first().attr('href'),
+        price: parseInt($(element).find('span.price').text().replace(/\D/, ''))
+      };
+  
+      if (isNaN(listing.price)) {
+        delete listing.price;
       }
-      listing['location'] = results[3].trim();
+  
+      var regex = /(\S+)br\D*(\d+\S+)?.*\((.*)\)/i;
+      var results = $(element).find('span.l2').text().match(regex);
+  
+      if (results) {
+        listing['bedrooms'] = parseInt(results[1]);
+        if (results[2]) {
+          listing.size = results[2];
+        }
+        listing['location'] = results[3].trim();
+      }
+  
+      var postedOn = new Date(Date.parse($(element).find('span.date').text() + " " + new Date().getFullYear()));
+      var yyyy = postedOn.getFullYear().toString();
+      var mm = (postedOn.getMonth()+1).toString();
+      var dd  = postedOn.getDate().toString();
+      listing.postedOn = yyyy + "-" + (mm[1]?mm:"0"+mm[0]) + "-" + (dd[1]?dd:"0"+dd[0]);
+      
+      listings.push(listing);
+      log.info(listing);
     }
-
-    var postedOn = new Date(Date.parse($(element).find('span.date').text() + " " + new Date().getFullYear()));
-    var yyyy = postedOn.getFullYear().toString();
-    var mm = (postedOn.getMonth()+1).toString();
-    var dd  = postedOn.getDate().toString();
-    listing.postedOn = yyyy + "-" + (mm[1]?mm:"0"+mm[0]) + "-" + (dd[1]?dd:"0"+dd[0]);
-    
-    listings.push(listing);
   });
 
   log.info("Found " + listings.length + " listings");
-  callback(listings);
+  //callback(listings);
 };
 
 var scanListings = function () {
-  log.info("Searching craigslist for dog-friendly apartments in Kona");
+  log.info("Searching craigslist for dog-friendly apartments in the Bay Area");
   var request = http.request(httpOptions, function(response) {
     var responseBody = "";
     
@@ -175,11 +178,11 @@ var scanListings = function () {
 };
 
 // parse and go
-konabot
+craigsbot
   .version(packageInfo.version)
   .option('-n, --numbers <list>', 'a list of phone numbers that should receive SMS notifications, e.g. +18005551234,+18005554321', numbers, numbers(NOTIFICATIONS_TO))
   .parse(process.argv);
 
-log.info("KonaBot lives!");
+log.info("CraigsBot lives!");
 scanListings();
 

@@ -100,7 +100,7 @@ var rememberListings = function (listings) {
               message += ": " + listing.url;
 
               log.info(message);
-              //sendNotification(message);
+              sendNotification(message);
             }
           }
         );
